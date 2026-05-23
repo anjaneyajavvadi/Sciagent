@@ -21,7 +21,7 @@ BATCH_SIZE        = 4              # keep small to not OOM on 8GB
 # ── Chunking ──────────────────────────────────────────────────────────────────
 CHUNK_SIZE        = 512            # tokens
 CHUNK_OVERLAP     = 51             # ~10%
-
+TIKTOKEN_ENCODER="cl100k_base"
 # ── Retrieval ─────────────────────────────────────────────────────────────────
 TOP_K_DENSE       = 20             # fetch more, reranker will cut it down
 TOP_K_BM25        = 20
