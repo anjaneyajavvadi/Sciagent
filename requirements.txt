@@ -1,0 +1,14 @@
+qdrant-client
+unstructured[all-docs]
+langchain-experimental
+sentence-transformers
+rank-bm25
+llmlingua
+ragas
+openai
+mlflow
+python-dotenv
+pydantic
+arxiv
+fitz
+pymupdf
