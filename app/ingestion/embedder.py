@@ -1,4 +1,4 @@
-from config import BGE_MODEL,BATCH_SIZE
+from config import BGE_MODEL,BATCH_SIZE,MODEL_CACHE_DIR
 from app.ingestion.chunker import Chunk
 from app.utils.logger import logger
 from FlagEmbedding import BGEM3FlagModel
@@ -9,7 +9,7 @@ class Embedder:
     def __init__(self):
         logger.info(f"Loading BGE-M3 model:{BGE_MODEL}")
         logger.info("First run downloads ~570MB, takes 2-5 min")
-        self.model=BGEM3FlagModel(BGE_MODEL,use_fp16=False)
+        self.model=BGEM3FlagModel(BGE_MODEL,use_fp16=False,cache_dir=MODEL_CACHE_DIR)
         logger.info("BGE-M3 loaded successfully")
 
     def embed_chunks(self,chunks:List[Chunk])->List[Dict[str,Any]]:

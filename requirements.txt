@@ -12,3 +12,5 @@ pydantic
 arxiv
 pymupdf
 flagembedding
+tavily-python
+azure-identity

@@ -6,13 +6,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+os.environ["HF_HUB_OFFLINE"]      = "0"
+os.environ["TRANSFORMERS_CACHE"]   = "data/model_cache"
+os.environ["HF_HOME"]              = "data/model_cache"
+
 QDRANT_HOST       = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT       = int(os.getenv("QDRANT_PORT", 6333))
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "research_papers")
 
 BGE_MODEL         = "BAAI/bge-m3"
 DENSE_DIM         = 1024          
-BATCH_SIZE        = 8             
+BATCH_SIZE        = 8   
+
 
 CHUNK_SIZE        = 512           
 CHUNK_OVERLAP     = 51            
@@ -27,13 +32,14 @@ RERANK_THRESHOLD  = 0.0
 
 AZURE_ENDPOINT    = os.getenv("AZURE_OPENAI_ENDPOINT", "")
 AZURE_API_KEY     = os.getenv("AZURE_OPENAI_API_KEY", "")
-AZURE_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
 AZURE_DEPLOYMENT  = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
+TAVILY_API_KEY    = os.getenv("TAVILY_API_KEY")
 
 DATA_DIR          = "data"
 PAPERS_DIR        = f"{DATA_DIR}/papers"
 INDEX_DIR         = f"{DATA_DIR}/indexes"
 BM25_INDEX_PATH   = f"{INDEX_DIR}/bm25_index.pkl"
+MODEL_CACHE_DIR   = f"{DATA_DIR}/model_cache"
 
 MAX_PAPERS        = 50    
 ARXIV_TOPICS = {

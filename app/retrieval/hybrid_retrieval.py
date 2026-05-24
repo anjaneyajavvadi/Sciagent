@@ -40,10 +40,13 @@ class HybridRetriever:
 
         for result_list in result_lists:
             for rank,result in enumerate(result_list):
-                chunk_id=result['payload']['chunk_id']
-                scores[chunk_id]=scores.get(chunk_id,0.0)+1.0/(k+rank+1)
-                payloads[chunk_id]=result['payload']
-
+                payload  = dict(result["payload"])  
+                if not payload or "chunk_id" not in payload:
+                    logger.warning(f"Skipping result with empty/invalid payload: {result}")
+                    continue
+                chunk_id = payload["chunk_id"]
+                scores[chunk_id]   = scores.get(chunk_id, 0.0) + 1.0 / (k + rank + 1)
+                payloads[chunk_id] = payload
         sorted_ids = sorted(scores, key=lambda x: scores[x], reverse=True)
 
         return [

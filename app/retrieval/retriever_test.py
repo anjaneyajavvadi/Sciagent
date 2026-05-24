@@ -16,5 +16,6 @@ ranked=reranker.rerank(query,results,top_k=5)
 
 for i,r in enumerate(ranked):
     print(f"\n--- Result {i+1} | score: {r['score']:.4f}")
+    print(f"Chunk_id:{r['payload']['chunk_id']}")
     print(f"Title: {r['payload']['title']}")
     print(f"Text:  {r['payload']['text'][:200]}")
