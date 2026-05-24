@@ -19,6 +19,7 @@ CHUNK_OVERLAP     = 51
 TIKTOKEN_ENCODER="cl100k_base"
 TOP_K_DENSE       = 20            
 TOP_K_BM25        = 20
+TOP_K_FUSION=10
 TOP_K_FINAL       = 5             
 
 RERANKER_MODEL    = "cross-encoder/ms-marco-MiniLM-L-6-v2"

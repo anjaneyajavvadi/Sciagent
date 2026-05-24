@@ -3,7 +3,7 @@ from app.ingestion.chunker import Chunk
 from app.utils.logger import logger
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Distance,VectorParams,SparseVectorParams,SparseIndexParams,PointStruct,SparseVector,NamedVector,NamedSparseVector
+    Distance,VectorParams,SparseVectorParams,SparseIndexParams,PointStruct,SparseVector,NamedVector,NamedSparseVector,QueryRequest
 )
 from typing import List,Dict,Any
 import uuid
@@ -93,13 +93,14 @@ class VectorStore:
         query_dense: list,
         top_k:       int = TOP_K_DENSE,
     ) -> List[Dict]:
-        results = self.client.search(
+        raw = self.client.query_points(
             collection_name = self.collection,
-            query_vector= NamedVector(name=DENSE_VECTOR_NAME, vector=query_dense),
-            limit= top_k,
-            with_payload= True,
+            query           = query_dense,
+            using           = DENSE_VECTOR_NAME,
+            limit           = top_k,
+            with_payload    = True,
         )
-        return [{"score": r.score, "payload": r.payload} for r in results]
+        return [{"score": r.score, "payload": r.payload} for r in raw.points]
 
     def sparse_search(
         self,
@@ -109,16 +110,14 @@ class VectorStore:
         indices = [int(k) for k in query_sparse.keys()]
         values= [float(v) for v in query_sparse.values()]
 
-        results = self.client.search(
+        raw = self.client.query_points(
             collection_name = self.collection,
-            query_vector= NamedSparseVector(
-                name= SPARSE_VECTOR_NAME,
-                vector = SparseVector(indices=indices, values=values),
-            ),
-            limit= top_k,
-            with_payload = True,
+            query           = SparseVector(indices=indices, values=values),
+            using           = SPARSE_VECTOR_NAME,
+            limit           = top_k,
+            with_payload    = True,
         )
-        return [{"score": r.score, "payload": r.payload} for r in results]
+        return [{"score": r.score, "payload": r.payload} for r in raw.points]
 
     def collection_info(self) -> dict:
         info = self.client.get_collection(self.collection)

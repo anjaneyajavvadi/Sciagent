@@ -1,4 +1,4 @@
-from config import TOP_K_BM25,TOP_K_DENSE,TOP_K_FINAL
+from config import TOP_K_BM25,TOP_K_DENSE,TOP_K_FUSION
 from app.ingestion.bm25_index import BM25Index
 from app.ingestion.embedder import Embedder
 from app.ingestion.qdrant_client import VectorStore
@@ -6,12 +6,12 @@ from app.utils.logger import logger
 from typing import List,Dict
 
 class HybridRetriever:
-    def __init__(self):
-        self.embedder=Embedder()
-        self.vector_store=VectorStore()
-        self.bm25=BM25Index()
+    def __init__(self, vector_store: VectorStore, embedder: Embedder, bm25: BM25Index):
+        self.vector_store=vector_store
+        self.embedder=embedder
+        self.bm25=bm25
 
-    def retrieve(self,query:str, top_k:int=TOP_K_FINAL)->List[Dict]:
+    def retrieve(self,query:str, top_k:int=TOP_K_FUSION)->List[Dict]:
         query_embedding=self.embedder.embed_query(query)
 
         dense_results=self.vector_store.dense_search(
