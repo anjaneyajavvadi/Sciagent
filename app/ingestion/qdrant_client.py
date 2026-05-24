@@ -1,5 +1,5 @@
 from config import QDRANT_HOST,QDRANT_COLLECTION,QDRANT_PORT, DENSE_DIM,TOP_K_DENSE
-from ingestion.chunker import Chunk
+from app.ingestion.chunker import Chunk
 from app.utils.logger import logger
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -14,8 +14,8 @@ SPARSE_VECTOR_NAME="sparse"
 class VectorStore:
     def __init__(self):
         self.client = QdrantClient(
-            host    = QDRANT_HOST,
-            port    = QDRANT_PORT,
+            host= QDRANT_HOST,
+            port= QDRANT_PORT,
             timeout = 30,
         )
         self.collection = QDRANT_COLLECTION
@@ -48,18 +48,18 @@ class VectorStore:
 
     def upsert_chunks(
         self,
-        chunks:     List[Chunk],
-        embeddings: List[Dict[str, Any]],
-        batch_size: int = 64,
+        chunks:List[Chunk],
+        embeddings:List[Dict[str, Any]],
+        batch_size:int = 64,
     ) -> int:
         assert len(chunks) == len(embeddings), \
             f"chunks({len(chunks)}) and embeddings({len(embeddings)}) must match"
 
         points = []
         for chunk, emb in zip(chunks, embeddings):
-            sparse_raw     = emb["sparse"]
+            sparse_raw= emb["sparse"]
             sparse_indices = [int(k) for k in sparse_raw.keys()]
-            sparse_values  = [float(v) for v in sparse_raw.values()]
+            sparse_values= [float(v) for v in sparse_raw.values()]
 
             point = PointStruct(
                 id     = str(uuid.uuid4()),
@@ -67,7 +67,7 @@ class VectorStore:
                     DENSE_VECTOR_NAME: emb["dense"].tolist(),
                     SPARSE_VECTOR_NAME: SparseVector(
                         indices = sparse_indices,
-                        values  = sparse_values,
+                        values= sparse_values,
                     ),
                 },
                 payload = chunk.to_dict(),
@@ -95,9 +95,9 @@ class VectorStore:
     ) -> List[Dict]:
         results = self.client.search(
             collection_name = self.collection,
-            query_vector    = NamedVector(name=DENSE_VECTOR_NAME, vector=query_dense),
-            limit           = top_k,
-            with_payload    = True,
+            query_vector= NamedVector(name=DENSE_VECTOR_NAME, vector=query_dense),
+            limit= top_k,
+            with_payload= True,
         )
         return [{"score": r.score, "payload": r.payload} for r in results]
 
@@ -107,15 +107,15 @@ class VectorStore:
         top_k:        int = TOP_K_DENSE,
     ) -> List[Dict]:
         indices = [int(k) for k in query_sparse.keys()]
-        values  = [float(v) for v in query_sparse.values()]
+        values= [float(v) for v in query_sparse.values()]
 
         results = self.client.search(
             collection_name = self.collection,
-            query_vector    = NamedSparseVector(
-                name   = SPARSE_VECTOR_NAME,
+            query_vector= NamedSparseVector(
+                name= SPARSE_VECTOR_NAME,
                 vector = SparseVector(indices=indices, values=values),
             ),
-            limit        = top_k,
+            limit= top_k,
             with_payload = True,
         )
         return [{"score": r.score, "payload": r.payload} for r in results]
@@ -123,6 +123,6 @@ class VectorStore:
     def collection_info(self) -> dict:
         info = self.client.get_collection(self.collection)
         return {
-            "vectors_count": info.vectors_count,
-            "status":        str(info.status),
+            "vectors_count": info.points_count,
+            "status":str(info.status),
         }

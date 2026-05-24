@@ -127,18 +127,6 @@ class Fetcher:
         topics: dict = None,
         save_dir: str = PAPERS_DIR,
     ) -> List[PaperDoc]:
-        """
-        Fetch papers for every topic in ARXIV_TOPICS (or a custom dict).
-    
-        Args:
-            max_per_topic: papers to fetch per topic. 10 topics × 10 papers = 100 max.
-                        Keep low (5-10) during dev to avoid OOM on 8GB RAM.
-            topics:        override ARXIV_TOPICS with a custom {label: query} dict.
-            save_dir:      where to store PDFs and metadata.
-    
-        Returns:
-            Deduplicated flat list of PaperDoc across all topics.
-        """
         topics = topics or ARXIV_TOPICS
         all_docs: List[PaperDoc] = []
         seen_ids: set = set()

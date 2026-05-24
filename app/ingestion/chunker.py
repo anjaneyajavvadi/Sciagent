@@ -41,6 +41,7 @@ class Chunker:
         )
 
     def chunk_docs(self,docs:List[PaperDoc])->List[Chunk]:
+        logger.info(f"got {len(docs)} documents")
         all_chunks:List[Chunk]=[]
 
         for doc in docs:
