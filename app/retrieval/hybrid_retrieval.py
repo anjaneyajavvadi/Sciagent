@@ -1,7 +1,7 @@
 from config import TOP_K_BM25,TOP_K_DENSE,TOP_K_FUSION
-from app.ingestion.bm25_index import BM25Index
+from app.indexing.bm25_index import BM25Index
 from app.ingestion.embedder import Embedder
-from app.ingestion.qdrant_client import VectorStore
+from app.indexing.vector_store import VectorStore
 from app.utils.logger import logger
 from typing import List,Dict
 

@@ -1,6 +1,6 @@
-from app.ingestion.qdrant_client import VectorStore
+from app.indexing.vector_store import VectorStore
 from app.ingestion.embedder import Embedder
-from app.ingestion.bm25_index import BM25Index
+from app.indexing.bm25_index import BM25Index
 from app.retrieval.hybrid_retrieval import HybridRetriever
 from app.retrieval.reranker import Reranker
 
