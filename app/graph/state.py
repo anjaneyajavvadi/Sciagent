@@ -4,6 +4,7 @@ from typing_extensions import TypedDict
 
 class AgentState(TypedDict):
     query:              str
+    guardrail:          str
     sub_questions:      List[str]        
     retrieved_chunks:   List[Dict[str, Any]]
     reranked_chunks:    List[Dict[str, Any]]

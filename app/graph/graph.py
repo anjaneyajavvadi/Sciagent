@@ -1,9 +1,9 @@
 import app.env_setup
 from app.graph.state import AgentState
-from app.graph.nodes import build_nodes, should_web_search, should_retry
-from app.ingestion.qdrant_client import VectorStore
+from app.graph.nodes import build_nodes, should_web_search, should_retry,is_relevant
+from app.indexing.vector_store import VectorStore
 from app.ingestion.embedder import Embedder
-from app.ingestion.bm25_index import BM25Index
+from app.indexing.bm25_index import BM25Index
 from app.retrieval.hybrid_retrieval import HybridRetriever
 from app.retrieval.reranker import Reranker
 from app.utils.logger import logger
@@ -20,6 +20,7 @@ def build_graph():
 
     graph = StateGraph(AgentState)
 
+    graph.add_node("guardrail",nodes['guardrail'])
     graph.add_node("planner",nodes["planner"])
     graph.add_node("retrieve",nodes["retrieve"])
     graph.add_node("web_search",nodes["web_search"])
@@ -27,8 +28,16 @@ def build_graph():
     graph.add_node("compress",nodes["compress"])
     graph.add_node("reflect",nodes["reflect"])
     graph.add_node("generate",nodes["generate"])
+    graph.add_node("reject",nodes['reject'])
+    
 
-    graph.set_entry_point("planner")
+    graph.set_entry_point("guardrail")
+
+    graph.add_conditional_edges(
+        "guardrail",
+        is_relevant,
+        {"planner":"planner","reject":"reject"}
+    )
 
     graph.add_edge("planner", "retrieve")
 
@@ -58,6 +67,7 @@ if __name__ == "__main__":
 
     result = agent.invoke({
         "query":              "What is attention mechanism in transformers?",
+        "guardrail":          "",
         "sub_questions":      [],
         "retrieved_chunks":   [],
         "reranked_chunks":    [],

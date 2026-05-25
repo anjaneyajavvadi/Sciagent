@@ -17,6 +17,38 @@ Do not hallucinate or use outside knowledge."""
 def build_nodes(retriever:HybridRetriever,reranker:Reranker):
     web_client=TavilySearch()
     llm=LLM()
+
+    def guardrail_node(state:AgentState)->AgentState:
+        logger.info(f"[guardrail] checking query: {state['query']}")
+        messages=[
+            {
+                'role':"system",
+                'content':(
+                "You are a query validator for a research paper assistant. "
+                "Determine if the user query is related to academic research, "
+                "science, technology, machine learning, statistics, or any scholarly topic. "
+                "Reply with exactly one of:\n"
+                "RELEVANT: <one line reason>\n"
+                "IRRELEVANT: <one line reason>"
+                )
+            },
+            {
+            "role": "user",
+            "content": state["query"]
+            }
+        ]
+        response=llm.chat(messages)
+        logger.info(f"[guardrail] {response.strip()}")
+        return {**state, "guardrail": response.strip()}
+
+    def reject_node(state:AgentState)->AgentState:
+        logger.info("[reject] query not relevant to research")
+        return {
+            **state,
+            "answer": "I am a research assistant and can only answer questions related to academic papers, science, technology, or scholarly topics. Please ask a research-related question.",
+            "sources":[]
+        }
+
     def planner_node(state:AgentState)->AgentState:
         logger.info(f"[planner] decomposing query: {state['query']}")
         messages = [
@@ -155,6 +187,8 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
         "compress":   compress_node,
         "reflect":    reflect_node,
         "generate":   generate_node,
+        "guardrail":  guardrail_node,
+        "reject":     reject_node
     }
 
 
@@ -174,3 +208,9 @@ def should_retry(state:AgentState)->str:
         return "retrieve"
     logger.info("[router] context sufficient → generate")
     return "generate"
+
+def is_relevant(state: AgentState) -> str:
+    if "IRRELEVANT" in state.get("guardrail", ""):
+        logger.info("[router] irrelevant query → reject")
+        return "reject"
+    return "planner"
