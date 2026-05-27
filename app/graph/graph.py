@@ -66,7 +66,7 @@ if __name__ == "__main__":
     agent = build_graph()
 
     result = agent.invoke({
-        "query":              "What is attention mechanism in transformers?",
+        "query":              "Hi can you tell me about BJP party",
         "guardrail":          "",
         "sub_questions":      [],
         "retrieved_chunks":   [],
