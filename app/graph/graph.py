@@ -29,6 +29,7 @@ def build_graph():
     graph.add_node("reflect",nodes["reflect"])
     graph.add_node("generate",nodes["generate"])
     graph.add_node("reject",nodes['reject'])
+    graph.add_node("replan",nodes['replan_node'])
     
 
     graph.set_entry_point("guardrail")
@@ -54,8 +55,9 @@ def build_graph():
     graph.add_conditional_edges(
         "reflect",
         should_retry,
-        {"retrieve": "retrieve", "generate": "generate"}
+        {"replan": "replan", "generate": "generate"}
     )
+    graph.add_edge("replan", "retrieve")
 
     graph.add_edge("generate", END)
 
@@ -66,7 +68,7 @@ if __name__ == "__main__":
     agent = build_graph()
 
     result = agent.invoke({
-        "query":              "Hi can you tell me about BJP party",
+        "query":              "Tell me about the attention mechanism",
         "guardrail":          "",
         "sub_questions":      [],
         "retrieved_chunks":   [],

@@ -1,8 +1,8 @@
 from app.ingestion.arxiv_fetcher import Fetcher,PaperDoc
 from app.ingestion.chunker import Chunker
 from app.ingestion.embedder import Embedder
-from app.ingestion.qdrant_client import VectorStore
-from app.ingestion.bm25_index import BM25Index
+from app.indexing.vector_store import VectorStore
+from app.indexing.bm25_index import BM25Index
 import json
 import os
 import fitz

@@ -91,7 +91,6 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
             **state,
             "retrieved_chunks": all_chunks,
             "web_search_used":  False,
-            "iteration_count":  state.get("iteration_count", 0)+1,
         }
 
     def web_search_node(state: AgentState) -> AgentState:
@@ -158,6 +157,25 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
         ])
         logger.info(f"[reflect] {response.strip()}")
         return {**state, "reflection": response.strip()}
+
+    def replan_node(state:AgentState)->AgentState:
+        messages=[
+            {
+                "role":"system",
+                "content":"The previous retrieval was insufficient. Rephrase the query differently to find better results. Return only the rephrased query, nothing else."
+            },
+            {
+                "role":"user",
+                "content":(
+                    f"Original query:{state['query']}\n",
+                    f"Why it failed:{state['reflection']}\n"
+                    f"Generate a better search query."
+                )
+            }
+        ]
+        response=llm.chat(messages)
+        return {**state, "query": response.strip(), "iteration_count": state["iteration_count"] + 1}
+    
     
     def generate_node(state: AgentState) -> AgentState:
         logger.info("[generate] calling Azure OpenAI")
@@ -188,15 +206,30 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
         "reflect":    reflect_node,
         "generate":   generate_node,
         "guardrail":  guardrail_node,
-        "reject":     reject_node
+        "reject":     reject_node,
+        "replan":   replan_node,
     }
 
 
 
-def should_web_search(state:AgentState)->str:
-    if len(state['retrieved_chunks'])<3:
-        logger.info("[router] low retrieval → web search")
+def should_web_search(state: AgentState) -> str:
+    chunks = state["retrieved_chunks"]
+
+    if not chunks:
         return "web_search"
+
+    top_scores = sorted(
+        [r["score"] for r in chunks],
+        reverse=True
+    )[:5]
+    avg_score = sum(top_scores) / len(top_scores)
+
+    logger.info(f"[router] avg top-5 RRF score: {avg_score:.4f}")
+
+    if avg_score < 0.02:
+        logger.info("[router] low relevance scores → web search")
+        return "web_search"
+
     return "rerank"
 
 def should_retry(state:AgentState)->str:
@@ -205,7 +238,7 @@ def should_retry(state:AgentState)->str:
 
     if "INSUFFICIENT" in reflection and iteration_count<2:
         logger.info(f"[router] context insufficient, retrying (attempt {iteration_count + 1})")
-        return "retrieve"
+        return "replan"
     logger.info("[router] context sufficient → generate")
     return "generate"
 
@@ -214,3 +247,9 @@ def is_relevant(state: AgentState) -> str:
         logger.info("[router] irrelevant query → reject")
         return "reject"
     return "planner"
+
+
+def should_retry(state: AgentState) -> str:
+    if "INSUFFICIENT" in state.get("reflection", "") and state.get("iteration_count", 0) < 2:
+        return "replan"   
+    return "generate"
