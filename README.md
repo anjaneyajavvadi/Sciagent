@@ -256,4 +256,4 @@ Response:
 
 ## License
 
-GENERAL APACHE LICENSE
+GNU General Public License v3.0
