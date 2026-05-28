@@ -4,77 +4,9 @@
 
 ---
 
-## Architecture
+![alt text](image.png)
 
-```
-## Architecture
 
-```
-User Query
-    │
-    ▼
-┌─────────────┐
-│  Guardrail  │ ── IRRELEVANT ──► "I only answer research questions" ──► END
-└──────┬──────┘
-       │ RELEVANT
-       ▼
-┌─────────────┐
-│   Planner   │  Decomposes query into 2-3 sub-questions (Azure OpenAI)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────────────────────────────────┐
-│                  Retriever                  │
-│                                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │  Dense   │  │  Sparse  │  │   BM25   │  │
-│  │  Search  │  │  Search  │  │  Search  │  │
-│  │ (Qdrant) │  │ (Qdrant) │  │ (Okapi)  │  │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  │
-│       └─────────────┴─────────────┘        │
-│                     │                       │
-│              RRF Fusion (k=60)              │
-└─────────────────────┬───────────────────────┘
-                      │
-                      ▼
-             ┌─────────────────┐
-             │    Reranker     │
-             │  Cross-Encoder  │
-             │  ms-marco-MiniLM│
-             └────────┬────────┘
-                      │
-          ┌───────────┴────────────┐
-          │  avg score < 0.02?     │
-          ▼                        ▼
-   ┌─────────────┐         ┌─────────────────┐
-   │  Web Search │         │    Compress     │
-   │  (Tavily)   │────────►│ Build context   │
-   └─────────────┘         │ window + cite   │
-                           └────────┬────────┘
-                                    │
-                                    ▼
-                           ┌─────────────────┐
-                           │     Reflect     │
-                           │  Quality check  │
-                           └────────┬────────┘
-                                    │
-                   ┌────────────────┴─────────────────┐
-                   │ INSUFFICIENT                      │ SUFFICIENT
-                   │ iteration < 2                     │
-                   ▼                                   ▼
-          ┌─────────────────┐               ┌─────────────────┐
-          │     Replan      │               │    Generate     │
-          │ Rephrase query  │               │  Azure OpenAI   │
-          │ via LLM         │               │  GPT-4o-mini    │
-          └────────┬────────┘               └────────┬────────┘
-                   │                                  │
-                   └──────► Retriever ◄───────────────┘
-                            (new query)               │
-                                                      ▼
-                                               Final Answer
-                                             + Sources + Citations
-                                             + Conversation Memory
-```
 ## Tech Stack
 
 | Component | Technology |
@@ -96,7 +28,7 @@ User Query
 
 ## Project Structure
 
-```
+```text
 SciAgent/
 ├── config.py                        # all constants, paths, model names
 ├── .env.example                     # API keys template
@@ -109,7 +41,7 @@ SciAgent/
 │   │   ├── arxiv_fetcher.py         # ArXiv SDK → PDF download → text extract
 │   │   ├── chunker.py               # RecursiveCharacterTextSplitter, 1500 chars
 │   │   └── embedder.py              # BGE-M3 → dense (1024d) + sparse vectors
-│   │ 
+│   │
 │   ├── indexing/
 │   │   ├── bm25_index.py            # BM25Okapi build, persist, search
 │   │   └── vectorstore.py           # Qdrant upsert, dense_search, sparse_search
@@ -125,7 +57,7 @@ SciAgent/
 │   │
 │   ├── tools/
 │   │   ├── llm.py                   # Azure OpenAI client wrapper
-│   │   └── tavily_client.py                 # Tavily web search
+│   │   └── tavily_client.py         # Tavily web search
 │   │
 │   ├── api/
 │   │   ├── schemas.py               # Pydantic request/response models
@@ -138,19 +70,16 @@ SciAgent/
 │   ├── papers/                      # downloaded PDFs + metadata.jsonl
 │   ├── indexes/                     # bm25_index.pkl
 │   ├── qdrant/                      # Qdrant persistent storage
-│   ├── eval_data/                   # BGE-M3 + reranker cached weights
-│   └── papers/                      # structured logger
+│   ├── eval_data/                   # cached weights
+│   └── logs/                        # structured logs
 │
 ├── evals/
-│     ├── eval.py                    # run deepeval for pipeline evaluation
-│     └── generate_testset.py        # generated Q&A evaluation set
-│ 
+│   ├── eval.py                      # DeepEval pipeline evaluation
+│   └── generate_testset.py          # synthetic Q&A generation
+│
 ├── main.py
-├── config.py
 └── requirements.txt
-
-
----
+```
 
 ## Setup
 
