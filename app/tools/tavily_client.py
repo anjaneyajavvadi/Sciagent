@@ -1,6 +1,8 @@
 from tavily import TavilyClient
 from config import TAVILY_API_KEY
 from typing import List,Dict,Any
+from app.utils.logger import logger
+import json
 
 class TavilySearch:
     def __init__(self):
@@ -14,7 +16,7 @@ class TavilySearch:
 
         web_chunks   = [
             {
-                "score":   1.0,
+                "score":   r.get("score"),
                 "payload": {
                     "chunk_id": f"web_{i}",
                     "paper_id": "web",
@@ -29,3 +31,9 @@ class TavilySearch:
         ]
         
         return web_chunks
+    
+if __name__=='__main__':
+    client=TavilySearch()
+    results=client.search("Latest developments in NASA and ISRO's lunar exploration missions and space research initiatives"
+                  )
+    logger.info(json.dumps(results, indent=2))

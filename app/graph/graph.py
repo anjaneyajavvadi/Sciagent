@@ -29,7 +29,7 @@ def build_graph():
     graph.add_node("reflect",nodes["reflect"])
     graph.add_node("generate",nodes["generate"])
     graph.add_node("reject",nodes['reject'])
-    graph.add_node("replan",nodes['replan_node'])
+    graph.add_node("replan",nodes['replan'])
     
 
     graph.set_entry_point("guardrail")
@@ -41,15 +41,14 @@ def build_graph():
     )
 
     graph.add_edge("planner", "retrieve")
-
+    graph.add_edge("retrieve", "rerank")
     graph.add_conditional_edges(
-        "retrieve",
+        "rerank",
         should_web_search,
-        {"web_search": "web_search", "rerank": "rerank"}
+        {"web_search": "web_search", "compress":"compress"}
     )
 
-    graph.add_edge("web_search", "rerank")
-    graph.add_edge("rerank",     "compress")
+    graph.add_edge("web_search", "compress")
     graph.add_edge("compress",   "reflect")
 
     graph.add_conditional_edges(
@@ -68,11 +67,12 @@ if __name__ == "__main__":
     agent = build_graph()
 
     result = agent.invoke({
-        "query":              "Tell me about the attention mechanism",
+        "query":              "Tell me about how currently reseacrh is going on moon and in space by NASA and ISRO",
         "guardrail":          "",
         "sub_questions":      [],
         "retrieved_chunks":   [],
         "reranked_chunks":    [],
+        "web_chunks":         [],
         "compressed_context": "",
         "reflection":         "",
         "answer":             "",

@@ -8,6 +8,7 @@ class AgentState(TypedDict):
     sub_questions:      List[str]        
     retrieved_chunks:   List[Dict[str, Any]]
     reranked_chunks:    List[Dict[str, Any]]
+    web_chunks:         List[Dict[str, Any]]
     compressed_context: str
     reflection:         str              
     answer:             str

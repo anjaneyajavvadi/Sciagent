@@ -96,9 +96,8 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
     def web_search_node(state: AgentState) -> AgentState:
         logger.info(f"[web_search] query: {state['query']}")
         web_chunks = web_client.search(state["query"])
-        merged     = state["retrieved_chunks"] + web_chunks
         logger.info(f"[web_search] added {len(web_chunks)} web chunks")
-        return {**state, "retrieved_chunks": merged, "web_search_used": True}
+        return {**state, "web_chunks": web_chunks, "web_search_used": True}
     
 
     def rerank_node(state: AgentState) -> AgentState:
@@ -129,10 +128,22 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
             if source not in sources:
                 sources.append(source)
 
+        if state.get("web_chunks"):
+            for i, r in enumerate(state["web_chunks"]):
+                p     = r["payload"]
+                title = p.get("title", "Web Result")
+                url   = p.get("url", "")
+                text  = p.get("text", "")
+
+                parts.append(f"[Web-{i+1}] {title}\n{text}")
+                source = f"{title} — {url}" if url else title
+                if source not in sources:
+                    sources.append(source)
+
         compressed = "\n\n".join(parts)
         logger.info(f"[compress] {len(compressed)} chars, {len(sources)} sources")
         return {**state, "compressed_context": compressed, "sources": sources}
-    
+        
 
     def reflect_node(state: AgentState) -> AgentState:
         logger.info("[reflect] evaluating context quality")
@@ -167,14 +178,14 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
             {
                 "role":"user",
                 "content":(
-                    f"Original query:{state['query']}\n",
+                    f"Original query:{state['query']}\n"
                     f"Why it failed:{state['reflection']}\n"
                     f"Generate a better search query."
                 )
             }
         ]
         response=llm.chat(messages)
-        return {**state, "query": response.strip(), "iteration_count": state["iteration_count"] + 1}
+        return {**state, "query": response.strip(), "iteration_count": state["iteration_count"] + 1,"retrieved_chunks": [],"reranked_chunks":  [],"compressed_context": "",}
     
     
     def generate_node(state: AgentState) -> AgentState:
@@ -213,7 +224,7 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
 
 
 def should_web_search(state: AgentState) -> str:
-    chunks = state["retrieved_chunks"]
+    chunks = state["reranked_chunks"]
 
     if not chunks:
         return "web_search"
@@ -224,13 +235,13 @@ def should_web_search(state: AgentState) -> str:
     )[:5]
     avg_score = sum(top_scores) / len(top_scores)
 
-    logger.info(f"[router] avg top-5 RRF score: {avg_score:.4f}")
+    logger.info(f"[router] avg top-5 Reranker score: {avg_score:.4f}")
 
     if avg_score < 0.02:
         logger.info("[router] low relevance scores → web search")
         return "web_search"
 
-    return "rerank"
+    return "compress"
 
 def should_retry(state:AgentState)->str:
     reflection=state.get('reflection',"")
