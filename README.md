@@ -97,7 +97,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Fill in your Azure OpenAI and Tavily keys
+# Fill in your Azure OpenAI( you can get them by creating a project and deploying a model in it) and Tavily( tavily API free version will give you 1000 credits per month) keys
 ```
 
 ### 3. Start Qdrant
@@ -107,7 +107,7 @@ docker run -d --name qdrant -p 6333:6333 --memory=1.5g \
   -v $(pwd)/data/qdrant:/qdrant/storage qdrant/qdrant
 ```
 
-### 4. Ingest papers
+### 4. Ingest papers ( May take more than 3hrs, kindly adjust papers per topic for faster indexing)
 
 ```bash
 python -m app.ingestion.pipeline_test
