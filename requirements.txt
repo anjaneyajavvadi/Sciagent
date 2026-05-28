@@ -4,7 +4,7 @@ langchain-experimental
 sentence-transformers
 rank-bm25
 llmlingua
-ragas
+fastapi
 openai
 mlflow
 python-dotenv
@@ -15,3 +15,4 @@ flagembedding
 tavily-python
 azure-identity
 datasets
+uvicorn
