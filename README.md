@@ -167,7 +167,7 @@ This reflection loop is what makes it agentic. A static RAG chain always generat
 
 ## Evaluation
 
-RAGAS metrics on 20 samples from the generated testset:
+DeepEval metrics on 20 samples from the generated testset:
 
 | Metric | Score |
 |---|---|
