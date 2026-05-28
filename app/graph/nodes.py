@@ -190,24 +190,39 @@ def build_nodes(retriever:HybridRetriever,reranker:Reranker):
     
     def generate_node(state: AgentState) -> AgentState:
         logger.info("[generate] calling Azure OpenAI")
+
+        history = state.get("messages", [])
+        history_text = ""
+        if history:
+            history_text = "\n".join([
+                f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content']}"
+                for m in history[-6:]  # last 3 turns only, don't bloat context
+            ])
+
         messages = [
         {
             "role":    "system",
-            "content": (
-                SYSTEM_PROMPT
-            )
+            "content": SYSTEM_PROMPT
         },
         {
             "role":    "user",
             "content": (
+                f"Conversation history:\n{history_text}\n\n" if history_text else ""
+            ) + (
                 f"Question: {state['query']}\n\n"
                 f"Context:\n{state['compressed_context']}"
             )
         }
         ]
+        
         response = llm.chat(messages)
         logger.info(f"[generate] answer: {len(response)} chars")
-        return {**state, "answer": response}
+        updated_messages = list(history) + [
+            {"role": "user",      "content": state["query"]},
+            {"role": "assistant", "content": response},
+        ]
+
+        return {**state, "answer": response, "messages": updated_messages}
     return {
         "planner":    planner_node,
         "retrieve":   retrieve_node,

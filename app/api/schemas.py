@@ -1,8 +1,9 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List,Optional
 
 class QueryRequest(BaseModel):
-    query: str
+    query:     str
+    thread_id: Optional[str]=None
 
 class QueryResponse(BaseModel):
     answer  :        str
@@ -10,6 +11,7 @@ class QueryResponse(BaseModel):
     web_search_used: bool
     sub_questions:   List[str]
     iteration_count: int
+    thread_id:       str
 
 class HealthResponse(BaseModel):
     status:     str

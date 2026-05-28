@@ -14,4 +14,5 @@ class AgentState(TypedDict):
     answer:             str
     sources:            List[str]
     web_search_used:    bool
-    iteration_count:    int              
+    iteration_count:    int       
+    messages:           List[Dict[str, str]]        

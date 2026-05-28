@@ -7,6 +7,7 @@ from app.api.dependencies import get_agent
 from app.indexing.vector_store import VectorStore
 from app.indexing.bm25_index import BM25Index
 from app.utils.logger import logger
+import uuid
 import os
 
 @asynccontextmanager
@@ -55,6 +56,10 @@ def query(request:QueryRequest,agent=Depends(get_agent)):
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
+    thread_id=request.thread_id or str(uuid.uuid4())
+    config={"configurable":{"thread_id":thread_id}}
+
+
     try:
         result = agent.invoke({
             "query":              request.query,
@@ -69,7 +74,8 @@ def query(request:QueryRequest,agent=Depends(get_agent)):
             "sources":            [],
             "web_search_used":    False,
             "iteration_count":    0,
-        })
+        },
+        config=config)
 
         return QueryResponse(
             answer          = result["answer"],
@@ -77,6 +83,7 @@ def query(request:QueryRequest,agent=Depends(get_agent)):
             web_search_used = result["web_search_used"],
             sub_questions   = result["sub_questions"],
             iteration_count = result["iteration_count"],
+            thread_id       = thread_id  
         )
     except Exception as e:
         logger.error(f"[api] query failed: {e}")

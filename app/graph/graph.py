@@ -10,7 +10,7 @@ from app.utils.logger import logger
 from langgraph.graph import StateGraph, END
 
 
-def build_graph():
+def build_graph(checkpointer=None):
     vector_store = VectorStore()
     embedder     = Embedder()
     bm25         = BM25Index()
@@ -60,7 +60,7 @@ def build_graph():
 
     graph.add_edge("generate", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)
 
 
 if __name__ == "__main__":
