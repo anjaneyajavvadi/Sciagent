@@ -1,9 +1,12 @@
 # SciAgent — Agentic RAG over ArXiv Research Papers
 
-> Production-grade research assistant with hybrid retrieval, cross-encoder reranking, agentic reflection loops, and RAGAS evaluation.
+> Production-grade research assistant with hybrid retrieval, cross-encoder reranking, agentic reflection loops, DeeepEval evaluation & Memory.
 
 ---
 
+## Architecture
+
+```
 ## Architecture
 
 ```
@@ -11,7 +14,7 @@ User Query
     │
     ▼
 ┌─────────────┐
-│  Guardrail  │ ── IRRELEVANT ──► "I only answer research questions"
+│  Guardrail  │ ── IRRELEVANT ──► "I only answer research questions" ──► END
 └──────┬──────┘
        │ RELEVANT
        ▼
@@ -33,55 +36,58 @@ User Query
 │              RRF Fusion (k=60)              │
 └─────────────────────┬───────────────────────┘
                       │
+                      ▼
+             ┌─────────────────┐
+             │    Reranker     │
+             │  Cross-Encoder  │
+             │  ms-marco-MiniLM│
+             └────────┬────────┘
+                      │
           ┌───────────┴────────────┐
-          │  < 3 chunks?           │
+          │  avg score < 0.02?     │
           ▼                        ▼
-   ┌─────────────┐         ┌─────────────┐
-   │  Web Search │         │   Reranker  │
-   │  (Tavily)   │────────►│ Cross-Enc.  │
-   └─────────────┘         │ ms-marco    │
-                           └──────┬──────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │    Compress     │
-                         │ Build context   │
-                         │ window + cite   │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │    Reflect      │◄─── INSUFFICIENT (max 2 retries)
-                         │ Quality check   │
-                         └────────┬────────┘
-                                  │ SUFFICIENT
-                                  ▼
-                         ┌─────────────────┐
-                         │    Generate     │
-                         │  Azure OpenAI   │
-                         │   GPT-4o-mini   │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                            Final Answer
-                          + Sources + Citations
+   ┌─────────────┐         ┌─────────────────┐
+   │  Web Search │         │    Compress     │
+   │  (Tavily)   │────────►│ Build context   │
+   └─────────────┘         │ window + cite   │
+                           └────────┬────────┘
+                                    │
+                                    ▼
+                           ┌─────────────────┐
+                           │     Reflect     │
+                           │  Quality check  │
+                           └────────┬────────┘
+                                    │
+                   ┌────────────────┴─────────────────┐
+                   │ INSUFFICIENT                      │ SUFFICIENT
+                   │ iteration < 2                     │
+                   ▼                                   ▼
+          ┌─────────────────┐               ┌─────────────────┐
+          │     Replan      │               │    Generate     │
+          │ Rephrase query  │               │  Azure OpenAI   │
+          │ via LLM         │               │  GPT-4o-mini    │
+          └────────┬────────┘               └────────┬────────┘
+                   │                                  │
+                   └──────► Retriever ◄───────────────┘
+                            (new query)               │
+                                                      ▼
+                                               Final Answer
+                                             + Sources + Citations
+                                             + Conversation Memory
 ```
-
----
-
 ## Tech Stack
 
 | Component | Technology |
 |---|---|
 | Orchestration | LangGraph |
-| LLM | Azure OpenAI (GPT-4o-mini) |
+| LLM | Azure OpenAI (GPT-4o) |
 | Embeddings | BAAI/bge-m3 (dense + sparse) |
 | Vector DB | Qdrant (local Docker) |
 | Sparse retrieval | BM25 Okapi (rank-bm25) |
 | Fusion | Reciprocal Rank Fusion (RRF) |
 | Reranker | cross-encoder/ms-marco-MiniLM-L-6-v2 |
 | Web search | Tavily API |
-| Evaluation | RAGAS (Faithfulness, Answer Relevancy, Context Recall, Context Precision) |
+| Evaluation | DeepEval (Faithfulness, Answer Relevancy, Context Recall, Context Precision) |
 | Paper source | ArXiv API |
 | PDF extraction | PyMuPDF |
 | Chunking | LangChain RecursiveCharacterTextSplitter |
@@ -102,9 +108,11 @@ SciAgent/
 │   ├── ingestion/
 │   │   ├── arxiv_fetcher.py         # ArXiv SDK → PDF download → text extract
 │   │   ├── chunker.py               # RecursiveCharacterTextSplitter, 1500 chars
-│   │   ├── embedder.py              # BGE-M3 → dense (1024d) + sparse vectors
-│   │   ├── qdrant_client.py         # Qdrant upsert, dense_search, sparse_search
-│   │   └── bm25_index.py            # BM25Okapi build, persist, search
+│   │   └── embedder.py              # BGE-M3 → dense (1024d) + sparse vectors
+│   │ 
+│   ├── indexing/
+│   │   ├── bm25_index.py            # BM25Okapi build, persist, search
+│   │   └── vectorstore.py           # Qdrant upsert, dense_search, sparse_search
 │   │
 │   ├── retrieval/
 │   │   ├── hybrid_retrieval.py      # RRF fusion of dense + sparse + BM25
@@ -117,16 +125,11 @@ SciAgent/
 │   │
 │   ├── tools/
 │   │   ├── llm.py                   # Azure OpenAI client wrapper
-│   │   └── tools.py                 # Tavily web search
+│   │   └── tavily_client.py                 # Tavily web search
 │   │
 │   ├── api/
-│   │   ├── main.py                  # FastAPI app + lifespan
 │   │   ├── schemas.py               # Pydantic request/response models
 │   │   └── dependencies.py          # agent singleton
-│   │
-│   ├── evaluation/
-│   │   ├── generate_testset.py      # LLM-generated Q&A pairs from chunks
-│   │   └── ragas_eval.py            # RAGAS pipeline evaluation
 │   │
 │   └── utils/
 │       └── logger.py                # structured logger
@@ -135,12 +138,17 @@ SciAgent/
 │   ├── papers/                      # downloaded PDFs + metadata.jsonl
 │   ├── indexes/                     # bm25_index.pkl
 │   ├── qdrant/                      # Qdrant persistent storage
-│   └── model_cache/                 # BGE-M3 + reranker cached weights
+│   ├── eval_data/                   # BGE-M3 + reranker cached weights
+│   └── papers/                      # structured logger
 │
-└── evals/
-    ├── testset.json                 # generated Q&A evaluation set
-    └── results.json                 # RAGAS scores
-```
+├── evals/
+│     ├── eval.py                    # run deepeval for pipeline evaluation
+│     └── generate_testset.py        # generated Q&A evaluation set
+│ 
+├── main.py
+├── config.py
+└── requirements.txt
+
 
 ---
 
@@ -170,25 +178,19 @@ docker run -d --name qdrant -p 6333:6333 --memory=1.5g \
   -v $(pwd)/data/qdrant:/qdrant/storage qdrant/qdrant
 ```
 
-### 4. Download models (first run only)
-
-```bash
-python scripts/download_models.py
-```
-
-### 5. Ingest papers
+### 4. Ingest papers
 
 ```bash
 python -m app.ingestion.pipeline_test
 ```
 
-### 6. Run the agent
+### 5. Run the agent
 
 ```bash
 python -m app.graph.graph
 ```
 
-### 7. Run the API
+### 6. Run the API
 
 ```bash
 uvicorn app.api.main:app --reload --port 8000
@@ -240,12 +242,12 @@ RAGAS metrics on 20 samples from the generated testset:
 
 | Metric | Score |
 |---|---|
-| Faithfulness | — |
-| Answer Relevancy | — |
-| Context Recall | — |
-| Context Precision | — |
+| Faithfulness | 0.8833 |
+| Answer Relevancy | 0.7767 |
+| Context Recall | 1 |
+| Context Precision | 0.8 |
 
-*Run `python -m app.evaluation.ragas_eval` to populate these scores.*
+*Run `python -m evals.eval` to populate these scores.*
 
 ---
 
@@ -304,7 +306,12 @@ Response:
 ### GET /health
 
 ```json
-{"status": "ok"}
+{
+  "status": "ok",
+  "qdrant": "OK- 7769 points",
+  "bm25_index": "OK — 7769 chunks",
+  "collection": "research_papers"
+}
 ```
 
 ---
@@ -313,7 +320,7 @@ Response:
 
 - BGE-M3 on CPU is slow (~5-10s per embed query). A GPU or ONNX export would cut this to <1s.
 - Corpus is limited to downloaded papers. Re-run ingestion to expand coverage.
-- RAGAS evaluation requires Azure OpenAI calls — costs tokens per sample.
+- DeepEval evaluation requires Azure OpenAI calls — costs tokens per sample.
 - Windows symlink warnings from HuggingFace cache are cosmetic and harmless.
 
 ---
